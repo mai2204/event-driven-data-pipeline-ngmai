@@ -11,19 +11,22 @@ import re
 
 @task
 def parse_s3_key(s3_key: str):
+    from prefect import get_run_logger
+    logger = get_run_logger()
+
+    logger.info(f"Parsing s3_key: {s3_key}")
     parts = s3_key.strip("/").split("/")
 
-    if len(parts) != 6:
-        raise ValueError("Invalid s3_key format")
-
-    _, system, table, year, month, day = parts
+    if len(parts) < 6:
+        logger.error("Invalid format detected!")
+        raise ValueError(f"Invalid s3_key format: {s3_key}")
 
     return {
-        "system": system,
-        "table": table,
-        "year": year,
-        "month": month,
-        "day": day
+        "system": parts[1],
+        "table": parts[2],
+        "year": parts[3],
+        "month": parts[4],
+        "day": parts[5],
     }
 
 @task
@@ -64,9 +67,13 @@ def process_file(bucket, target_bucket, key):
     move_file(bucket, key, target_bucket, target_key)
 
     print(f"Moved: {filename}")
-
+    
+from prefect import get_run_logger
 @flow(name="ecom_rcv_to_l0")
 def ecom_flow(s3_key: str):
+    logger = get_run_logger()
+
+    logger.info(f"INPUT s3_key = {s3_key}")
     bucket = CONFIG["ecom"]["source_bucket"]
     target_bucket = CONFIG["target_bucket"]
 
