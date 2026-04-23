@@ -48,17 +48,16 @@ def get_matching_files(bucket: str, table: str, date: str):
     logger.info(f"Searching in bucket: {bucket}")
 
     response = s3.list_objects_v2(Bucket=bucket)
-
-    logger.info(f"Files in bucket: {response}")
     contents = response.get("Contents", [])
 
     matched_files = []
+    print(table)
 
     for obj in contents:
-        key = obj["Key"]
-        filename = key.split("/")[-1]
-
-        logger.info(f"Print key: {key}")
+        key = obj["Key"]# order_reviews_ecom_04092026.csv
+        filename = key.split(".")[-1]
+        print(filename)
+        print(key)
         if filename.startswith(f"{table}_ecom_") and date in filename:
             matched_files.append(key)
 

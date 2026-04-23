@@ -8,6 +8,7 @@ def deploy():
  # Note: Ensure the block name matches what you created in the UI
     github_creds = GitHubCredentials.load("git-api")
 
+    aws_credentials_block = AwsCredentials.load("block-name")
  # 2. Define the remote source (The "Pull" step)
     source = GitRepository(
         url="https://github.com/mai2204/RCV-to-L0-Prefect-AWS.git",
