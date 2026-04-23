@@ -11,22 +11,27 @@ import re
 
 @task
 def parse_s3_key(s3_key: str):
-    from prefect import get_run_logger
-    logger = get_run_logger()
+    import re
 
-    logger.info(f"Parsing s3_key: {s3_key}")
-    parts = s3_key.strip("/").split("/")
+    # data/ecom/order_reviews/2026/04/09/
+    pattern = r"data/ecom/(.+)/(\d{4})/(\d{2})/(\d{2})/"
 
-    if len(parts) < 6:
-        logger.error("Invalid format detected!")
-        raise ValueError(f"Invalid s3_key format: {s3_key}")
+    match = re.match(pattern, s3_key)
+
+    if not match:
+        raise ValueError("Invalid s3_key format")
+
+    table = match.group(1)
+    year = match.group(2)
+    month = match.group(3)
+    day = match.group(4)
 
     return {
-        "system": parts[1],
-        "table": parts[2],
-        "year": parts[3],
-        "month": parts[4],
-        "day": parts[5],
+        "table": table,
+        "year": year,
+        "month": month,
+        "day": day,
+        "date_mmddyyyy": f"{month}{day}{year}  # 04092026"
     }
 
 @task
@@ -36,60 +41,63 @@ def build_file_date(info):
 
 @task
 def get_matching_files(bucket: str, table: str, date: str):
-    files = list_files(bucket)
+    import boto3
+    from prefect import get_run_logger
 
-    matched = []
+    logger = get_run_logger()
+    s3 = boto3.client("s3")
 
-    for f in files:
-        filename = f.split("/")[-1]
+    # match filename format in RCV
+    prefix = f"{table}_ecom_{date}"
 
-        if filename.startswith("trigger_"):
-            continue
+    logger.info(f"Searching in bucket: {bucket}")
+    logger.info(f"Using prefix: {prefix}")
 
-        if table in filename and date in filename:
-            matched.append(f)
+    response = s3.list_objects_v2(
+        Bucket=bucket,
+        Prefix=prefix
+    )
 
-    print("Matched:", matched)
-    return matched
+    contents = response.get("Contents", [])
+
+    files = [obj["Key"] for obj in contents]
+
+    logger.info(f"Matched files: {files}")
+
+    return files
 
 @task
-def process_file(bucket, target_bucket, key):
+def process_file(source_bucket, target_bucket, key, info):
+    from utils.s3_helper import move_file
+    from dags.L1.ecom.construct_s3_key import build_ecom_key
+
     filename = key.split("/")[-1]
-
-    info = parse_ecom_filename(filename)
-
-    if not info:
-        print(f"Skip invalid file: {filename}")
-        return
 
     target_key = build_ecom_key(info, filename)
 
-    move_file(bucket, key, target_bucket, target_key)
+    move_file(source_bucket, key, target_bucket, target_key)
 
-    print(f"Moved: {filename}")
-    
-from prefect import get_run_logger
+    print(f"Moved: {filename} → {target_key}")
+
 @flow(name="ecom_rcv_to_l0")
 def ecom_flow(s3_key: str):
-    logger = get_run_logger()
 
-    logger.info(f"INPUT s3_key = {s3_key}")
-    bucket = CONFIG["ecom"]["source_bucket"]
+    source_bucket = CONFIG["ecom"]["source_bucket"]   # rcv bucket
     target_bucket = CONFIG["target_bucket"]
+
+    print("INPUT s3_key =", s3_key)
 
     info = parse_s3_key(s3_key)
 
-    file_date = build_file_date(info)
-
     files = get_matching_files(
-        bucket,
+        source_bucket,
         info["table"],
-        file_date
+        info["date_mmddyyyy"]
     )
 
     if not files:
         print("No files found")
         return
-    
+
     for f in files:
-        process_file(bucket, target_bucket, f)
+        process_file(source_bucket, target_bucket, f, info)
