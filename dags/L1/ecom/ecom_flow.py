@@ -49,20 +49,22 @@ def get_matching_files(bucket: str, table: str, date: str):
 
     response = s3.list_objects_v2(Bucket=bucket)
 
+    logger.info(f"Files in bucket: {response}")
     contents = response.get("Contents", [])
 
-    matched = []
+    matched_files = []
 
     for obj in contents:
         key = obj["Key"]
         filename = key.split("/")[-1]
 
+        logger.info(f"Print key: {key}")
         if filename.startswith(f"{table}_ecom_") and date in filename:
-            matched.append(key)
+            matched_files.append(key)
 
-    logger.info(f"Matched files: {matched}")
+    logger.info(f"Matched files: {matched_files}")
 
-    return matched
+    return matched_files
 
 @task
 def process_file(source_bucket, target_bucket, key, info):
