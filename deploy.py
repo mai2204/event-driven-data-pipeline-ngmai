@@ -24,7 +24,7 @@ def deploy():
 
  # 4. Ship it to Prefect Cloud (The 'deployments' section)
     my_flow.deploy(
-        name="ecom-deployment",
+        name="ecom-deploy",
         work_pool_name="Serverless",
         job_variables={
             "pip_packages": ["boto3"] 
