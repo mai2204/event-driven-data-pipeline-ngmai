@@ -16,7 +16,7 @@ def deploy():
 
  # 2. Define the remote source (The "Pull" step)
     source = GitRepository(
-        url="https://github.com/mai2204/RCV-to-L0-Prefect-AWS.git",
+        url="https://github.com/mai2204/event-driven-data-pipeline-ngmai.git",
         branch="main",
         credentials=github_creds
     )
