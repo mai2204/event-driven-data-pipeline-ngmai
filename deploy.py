@@ -3,7 +3,7 @@ import boto3
 from prefect.runner.storage import GitRepository
 from prefect_github import GitHubCredentials
 # from prefect.deployments import Deployment
-from prefect_aws import AWSCredentials
+from prefect_aws import AwsCredentials
 
 def deploy():
  # 1. Load the GitHub credentials block
@@ -12,7 +12,7 @@ def deploy():
 
  # 2. Load the AWS credentials block
  # Note: Ensure the block name matches what you created in the UI
-    aws_creds = AWSCredentials.load("aws-credentials")
+    aws_creds = AwsCredentials.load("aws-credentials")
 
  # 2. Define the remote source (The "Pull" step)
     source = GitRepository(
