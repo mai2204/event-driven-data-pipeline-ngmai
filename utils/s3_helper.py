@@ -3,6 +3,7 @@ from prefect_aws import AwsCredentials
 
 aws_creds = AwsCredentials.load("aws-credentials")
 s3_client = aws_creds.get_boto3_session().client("s3")
+
 def list_files(bucket, s3_client):
     response = s3_client.list_objects_v2(Bucket=bucket)
     return [obj["Key"] for obj in response.get("Contents", [])]
